@@ -1,0 +1,46 @@
+{
+    "companies": [
+        {
+            "name": "Shoppers Drug Mart",
+            "company_size": "Large",
+            "website": "https://www.shoppersdrugmart.ca",
+            "description": "Major Canadian pharmacy chain"
+        },
+        {
+            "name": "MedMe Health",
+            "company_size": "Unknown",
+            "website": null,
+            "description": "Offers comprehensive minor ailment solutions with pre-configured templates for up to 51 conditions, featuring patient eligibility screening and integrated clinical platforms"
+        },
+        {
+            "name": "PharmAssess",
+            "company_size": "Unknown",
+            "website": null,
+            "description": "Provides automated documentation and prescribing for minor ailments across nine Canadian provinces, with streamlined patient portal integration"
+        },
+        {
+            "name": "MAPflow",
+            "company_size": "Unknown",
+            "website": null,
+            "description": "Ontario-specific platform designed for minor ailment prescribing with clinical decision-making support and seamless workflow integration"
+        },
+        {
+            "name": "Asepha",
+            "company_size": "Unknown",
+            "website": null,
+            "description": null
+        },
+        {
+            "name": "Vigilante",
+            "company_size": "Unknown",
+            "website": null,
+            "description": null
+        },
+        {
+            "name": "Telus Health",
+            "company_size": "Unknown",
+            "website": null,
+            "description": null
+        }
+    ]
+}
