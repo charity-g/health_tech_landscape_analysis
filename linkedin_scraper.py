@@ -10,6 +10,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import pandas as pd
+from dotenv import load_dotenv, dotenv_values 
+import os
+load_dotenv() 
 
 class LinkedInScraper:
     def __init__(self, headless=False):
@@ -26,10 +29,9 @@ class LinkedInScraper:
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
-        
-        # You'll need to download ChromeDriver and specify the path
-        # service = Service('/path/to/chromedriver')
-        self.driver = webdriver.Chrome(options=chrome_options)
+
+        service = Service(os.getenv('CHROMEDRIVER_PATH', 'chromedriver'))  # Ensure CHROMEDRIVER_PATH is set in .env
+        self.driver = webdriver.Chrome(service=service, options=chrome_options)
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
     def login(self, username, password):
@@ -223,11 +225,9 @@ def main():
     JSON_FILE = "Scrape.json"
     OUTPUT_CSV = "linkedin_posts.csv"
     OUTPUT_JSON = "linkedin_posts.json"
-    
-    # LinkedIn credentials (you'll need to provide these)
-    LINKEDIN_USERNAME = "your_email@example.com"
-    LINKEDIN_PASSWORD = "your_password"
-    
+    LINKEDIN_USERNAME = os.getenv('LINKEDIN_USERNAME')
+    LINKEDIN_PASSWORD = os.getenv('LINKEDIN_PASSWORD')
+
     scraper = LinkedInScraper(headless=False)  # Set to True to run headless
     
     try:
