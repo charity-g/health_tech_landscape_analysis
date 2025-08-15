@@ -12,7 +12,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import pandas as pd
 from dotenv import load_dotenv, dotenv_values 
 import os
-import print_warn, print_error from utils
+from utils import print_warn, print_error 
 load_dotenv() 
 
 class LinkedInScraper:
@@ -242,6 +242,8 @@ def main():
     LINKEDIN_PASSWORD = os.getenv('LINKEDIN_PASSWORD')
     with open(JSON_FILE, 'r') as file:
         data = json.load(file)
+    
+    data['companies'] = [data['companies'][0]]
 
     scraper = LinkedInScraper(headless=False)  # Set to True to run headless
 
