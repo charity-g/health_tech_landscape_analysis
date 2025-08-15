@@ -92,66 +92,63 @@ class LinkedInScraper:
     def scrape_company_posts(self, company_url, max_posts=10):
         """Scrape recent posts from a company's LinkedIn page"""
         posts_data = []
-        
         try:
-            # Navigate to company posts
             posts_url = f"{company_url}/posts/"
             self.driver.get(posts_url)
-            
-            # Wait for posts to load
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "scaffold-finite-scroll__content"))
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
-            
             # Scroll to load more posts
-            for _ in range(3):  # Scroll 3 times to load more content
+            for _ in range(3):
                 self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                 time.sleep(2)
-            
-            # Find post elements
-            posts = self.driver.find_elements(By.XPATH, "//div[contains(@class, 'feed-shared-update-v2')]")
-            
-            for i, post in enumerate(posts[:max_posts]):
+            # Try to find posts by the updated class
+            post_elements = self.driver.find_elements(By.XPATH, "//div[contains(@class, 'update-components-actor')]//ancestor::div[contains(@class, 'scaffold-finite-scroll__content')]//div[contains(@class, 'feed-shared-update-v2') or contains(@data-urn, 'urn:li:activity:')]")
+            if not post_elements:
+                # fallback: try to find all posts by post text
+                post_elements = self.driver.find_elements(By.XPATH, "//span[contains(@class, 'break-words')]/ancestor::div[contains(@data-urn, 'urn:li:activity:')]")
+            for i, post in enumerate(post_elements[:max_posts]):
                 try:
                     post_data = self.extract_post_data(post)
                     if post_data:
                         posts_data.append(post_data)
                 except Exception as e:
                     print_error(f"Error extracting post {i}: {str(e)}")
-                    
         except TimeoutException:
             print_error(f"Could not load posts for {company_url}")
         except Exception as e:
             print_error(f"Error scraping posts: {str(e)}")
-            
         return posts_data
-    
+
     def extract_post_data(self, post_element):
         """Extract data from a single post element"""
         try:
             # Extract post text
-            text_element = post_element.find_element(By.XPATH, ".//span[contains(@class, 'break-words')]")
-            post_text = text_element.text if text_element else ""
-            
+            try:
+                text_element = post_element.find_element(By.XPATH, ".//span[contains(@class, 'break-words')]")
+                post_text = text_element.text.strip()
+            except NoSuchElementException:
+                post_text = ""
             # Extract timestamp
-            time_element = post_element.find_element(By.XPATH, ".//time")
-            timestamp = time_element.get_attribute('datetime') if time_element else ""
-            
+            try:
+                time_element = post_element.find_element(By.XPATH, ".//time")
+                timestamp = time_element.get_attribute('datetime') or time_element.text
+            except NoSuchElementException:
+                timestamp = ""
             # Extract engagement metrics (likes, comments, etc.)
             try:
-                engagement_element = post_element.find_element(By.XPATH, ".//button[contains(@aria-label, 'reactions')]")
-                engagement_text = engagement_element.text if engagement_element else "0"
+                engagement_element = post_element.find_element(By.XPATH, ".//span[contains(@class, 'social-details-social-counts__reactions-count')]")
+                engagement_text = engagement_element.text
             except NoSuchElementException:
-                engagement_text = "0"
-            
+                engagement_text = ""
             return {
                 'post_text': post_text,
                 'timestamp': timestamp,
                 'engagement': engagement_text,
                 'scraped_at': datetime.now().isoformat()
             }
-            
-        except NoSuchElementException:
+        except Exception as e:
+            print_error(f"Error extracting post data: {str(e)}")
             return None
     
     def scrape_companies_from_json(self, data, max_posts_per_company=10):
@@ -244,6 +241,7 @@ def main():
         data = json.load(file)
     
     data['companies'] = [data['companies'][0]]
+    print_warn('MOCK DATA being called, not full scrape')
 
     scraper = LinkedInScraper(headless=False)  # Set to True to run headless
 
