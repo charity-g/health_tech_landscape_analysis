@@ -12,6 +12,7 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import pandas as pd
 from dotenv import load_dotenv, dotenv_values 
 import os
+import print_warn, print_error from utils
 load_dotenv() 
 
 class LinkedInScraper:
@@ -58,7 +59,7 @@ class LinkedInScraper:
             return True
             
         except TimeoutException:
-            print("Login failed - timeout")
+            print_error("Login failed - timeout")
             return False
         except Exception as e:
             print(f"Login failed: {str(e)}")
@@ -82,9 +83,9 @@ class LinkedInScraper:
                 return company_url
             
         except TimeoutException:
-            print(f"Could not find company: {company_name}")
+            print_error(f"Could not find company: {company_name}")
         except Exception as e:
-            print(f"Error searching for {company_name}: {str(e)}")
+            print_error(f"Error searching for {company_name}: {str(e)}")
         
         return None
     
@@ -116,12 +117,12 @@ class LinkedInScraper:
                     if post_data:
                         posts_data.append(post_data)
                 except Exception as e:
-                    print(f"Error extracting post {i}: {str(e)}")
+                    print_error(f"Error extracting post {i}: {str(e)}")
                     
         except TimeoutException:
-            print(f"Could not load posts for {company_url}")
+            print_error(f"Could not load posts for {company_url}")
         except Exception as e:
-            print(f"Error scraping posts: {str(e)}")
+            print_error(f"Error scraping posts: {str(e)}")
             
         return posts_data
     
@@ -153,56 +154,68 @@ class LinkedInScraper:
         except NoSuchElementException:
             return None
     
-    def scrape_companies_from_json(self, json_file_path, max_posts_per_company=10):
+    def scrape_companies_from_json(self, data, max_posts_per_company=10):
         """Main function to scrape all companies from JSON file"""
         # Read companies from JSON
-        with open(json_file_path, 'r') as file:
-            data = json.load(file)
         
         all_company_data = []
         
-        for company in data['companies']:
-            company_name = company['name']
-            print(f"Processing company: {company_name}")
-            
-            # Search for company
-            company_url = self.search_company(company_name)
-            
-            if company_url:
-                print(f"Found company URL: {company_url}")
+        try:
+            for company in data['companies']:
+                company_name = company['name']
+                print(f"Processing company: {company_name}")
                 
-                # Scrape posts
-                posts = self.scrape_company_posts(company_url, max_posts_per_company)
+                # Search for company
+                company_url = self.search_company(company_name)
                 
-                company_data = {
-                    'company_name': company_name,
-                    'company_url': company_url,
-                    'posts': posts,
-                    'total_posts_scraped': len(posts)
-                }
-                
-                all_company_data.append(company_data)
-                print(f"Scraped {len(posts)} posts for {company_name}")
-                
-                # Add delay between companies to avoid rate limiting
-                time.sleep(5)
-            else:
-                print(f"Could not find LinkedIn page for {company_name}")
-        
+                if company_url:
+                    print(f"Found company URL: {company_url}")
+                    
+                    # Scrape posts
+                    posts = self.scrape_company_posts(company_url, max_posts_per_company)
+                    
+                    company_data = {
+                        'company_name': company_name,
+                        'company_url': company_url,
+                        'posts': posts,
+                        'total_posts_scraped': len(posts)
+                    }
+                    
+                    all_company_data.append(company_data)
+                    print(f"Scraped {len(posts)} posts for {company_name}")
+                    
+                    # Add delay between companies to avoid rate limiting
+                    time.sleep(5)
+                else:
+                    print_warn(f"Could not find LinkedIn page for {company_name}")
+        except Exception as e:
+            print_error(f"Error processing company {company_name}: {str(e)}")
         return all_company_data
     
     def save_to_csv(self, data, output_file):
         """Save scraped data to CSV file"""
         rows = []
         for company in data:
-            for post in company['posts']:
+            scraped_at = datetime.now().isoformat()
+            if company['posts']:
+                for post in company['posts']:
+                    rows.append({
+                        'company_name': company['company_name'],
+                        'company_url': company['company_url'],
+                        'post_text': post['post_text'],
+                        'timestamp': post['timestamp'],
+                        'engagement': post['engagement'],
+                        'scraped_at': scraped_at
+                    })
+            else:
+                # Add a row even if no posts were found
                 rows.append({
                     'company_name': company['company_name'],
                     'company_url': company['company_url'],
-                    'post_text': post['post_text'],
-                    'timestamp': post['timestamp'],
-                    'engagement': post['engagement'],
-                    'scraped_at': post['scraped_at']
+                    'post_text': '',
+                    'timestamp': '',
+                    'engagement': '',
+                    'scraped_at': scraped_at
                 })
         
         df = pd.DataFrame(rows)
@@ -227,16 +240,18 @@ def main():
     OUTPUT_JSON = "linkedin_posts.json"
     LINKEDIN_USERNAME = os.getenv('LINKEDIN_USERNAME')
     LINKEDIN_PASSWORD = os.getenv('LINKEDIN_PASSWORD')
+    with open(JSON_FILE, 'r') as file:
+        data = json.load(file)
 
     scraper = LinkedInScraper(headless=False)  # Set to True to run headless
-    
+
     try:
         # Login to LinkedIn
         if scraper.login(LINKEDIN_USERNAME, LINKEDIN_PASSWORD):
             print("Starting company scraping...")
             
             # Scrape companies
-            company_data = scraper.scrape_companies_from_json(JSON_FILE, max_posts_per_company=5)
+            company_data = scraper.scrape_companies_from_json(data, max_posts_per_company=5)
             
             # Save results
             scraper.save_to_csv(company_data, OUTPUT_CSV)
@@ -244,10 +259,9 @@ def main():
             
             print(f"Scraping completed. Processed {len(company_data)} companies.")
         else:
-            print("Failed to login to LinkedIn")
-            
+            print_error("Failed to login to LinkedIn")
     except Exception as e:
-        print(f"Error during scraping: {str(e)}")
+        print_error(f"Error during scraping: {str(e)}")
     finally:
         scraper.close()
 
