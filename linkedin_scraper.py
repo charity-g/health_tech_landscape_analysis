@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import pandas as pd
-from dotenv import load_dotenv, dotenv_values 
+from dotenv import load_dotenv 
 import os
 from utils import print_warn, print_error 
 load_dotenv() 
